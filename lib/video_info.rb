@@ -5,9 +5,19 @@ require 'provider/vimeo'
 require 'provider/youtube'
 
 class VideoInfo
+  PROVIDERS = [
+    Provider::Vimeo,
+    Provider::Youtube
+  ]
+
+  def self.provider_for_url(url)
+    PROVIDERS.each do |provider|
+      return provider if provider.matches?(url)
+    end
+    nil
+  end
 
   def initialize(url, options = {})
-
     options = { "User-Agent" => "VideoInfo/#{VideoInfoVersion::VERSION}" }.merge options
     options.dup.each do |key,value|
       unless OpenURI::Options.keys.include? key
@@ -17,23 +27,16 @@ class VideoInfo
         end
       end
     end
-
-    case url
-    when /vimeo\.com/
-      @video = Vimeo.new(url, options)
-    when /youtube\.com/
-      @video = Youtube.new(url, options)
-    when /youtu\.be/
-      @video = Youtube.new(url, options)
-    end
+    
+    provider = self.class.provider_for_url(url)
+    @video = provider ? provider.new(url, options) : nil
   end
 
   def valid?
-    @video != nil && !["", nil].include?(title)
+    @video != nil && !["", nil].include?(@video.title)
   end
 
   def method_missing(sym, *args, &block)
     @video.send sym, *args, &block
   end
-
 end

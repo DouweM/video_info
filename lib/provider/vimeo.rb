@@ -1,38 +1,38 @@
-class Vimeo
-  attr_accessor :video_id, :embed_url, :embed_code, :url, :provider, :title, :description, :keywords,
-                :duration, :date, :width, :height,
-                :thumbnail_small, :thumbnail_large,
-                :view_count,
-                :openURI_options
+require_relative 'base'
 
-  def initialize(url, options = {})
-    @openURI_options = options
-    @video_id = url.gsub(/.*\.com\/(?:groups\/[^\/]+\/videos\/)?([0-9]+).*$/i, '\1')
-    get_info unless @video_id == url || @video_id.nil? || @video_id.empty?
-  end
+class VideoInfo
+  module Provider
+    class Vimeo < Provider::Base
+      self.provider_name = "Vimeo"
 
-private
+      self.url_regex = /vimeo\.com\/(?:groups\/[^\/]+\/videos\/)?([0-9]+).*$/i
 
-  def get_info
-    begin
-      doc = Hpricot(open("http://vimeo.com/api/v2/video/#{@video_id}.xml", @openURI_options))
-      @provider         = "Vimeo"
-      @url              = doc.search("url").inner_text
-      @embed_url        = "http://player.vimeo.com/video/#{@video_id}"
-      @embed_code       = "<iframe src=\"#{@embed_url}?title=0&amp;byline=0&amp;portrait=0&amp;autoplay=0\" frameborder=\"0\"></iframe>"
-      @title            = doc.search("title").inner_text
-      @description      = doc.search("description").inner_text
-      @keywords         = doc.search("tags").inner_text
-      @duration         = doc.search("duration").inner_text.to_i # seconds
-      @width            = doc.search("width").inner_text.to_i
-      @height           = doc.search("height").inner_text.to_i
-      @date             = Time.parse(doc.search("upload_date").inner_text, Time.now.utc).utc
-      @thumbnail_small  = doc.search("thumbnail_small").inner_text
-      @thumbnail_large  = doc.search("thumbnail_large").inner_text
-      @view_count       = doc.search("stats_number_of_plays").inner_text.to_i
-    rescue
-      nil
+      private
+        def get_video_id(url)
+          url_matches = url.match(self.class.url_regex)
+          @video_id = url_matches ? url_matches[1] : nil
+        end
+
+        def get_info
+          begin
+            doc = Hpricot(open("http://vimeo.com/api/v2/video/#{@video_id}.xml", @openURI_options))
+            @url              = doc.search("url").inner_text
+            @embed_url        = "http://player.vimeo.com/video/#{@video_id}"
+            @embed_code       = "<iframe src=\"#{@embed_url}?title=0&amp;byline=0&amp;portrait=0&amp;autoplay=0\" frameborder=\"0\"></iframe>"
+            @title            = doc.search("title").inner_text
+            @description      = doc.search("description").inner_text
+            @keywords         = doc.search("tags").inner_text
+            @duration         = doc.search("duration").inner_text.to_i # seconds
+            @width            = doc.search("width").inner_text.to_i
+            @height           = doc.search("height").inner_text.to_i
+            @date             = Time.parse(doc.search("upload_date").inner_text, Time.now.utc).utc
+            @thumbnail_small  = doc.search("thumbnail_small").inner_text
+            @thumbnail_large  = doc.search("thumbnail_large").inner_text
+            @view_count       = doc.search("stats_number_of_plays").inner_text.to_i
+          rescue
+            nil
+          end
+        end
     end
   end
-
 end
